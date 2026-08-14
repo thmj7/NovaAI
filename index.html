@@ -726,10 +726,12 @@ promptEl.addEventListener("input",()=>{
   promptEl.style.height="auto";
   promptEl.style.height=Math.min(promptEl.scrollHeight,130)+"px";
 });
-promptEl.addEventListener("keydown",e=>{
-  if(e.key==="Enter" && !e.shiftKey){e.preventDefault();sendMessage();}
+ promptEl.addEventListener("keydown",e=>{
+  if(e.key==="Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
 });
-
 document.getElementById("attachBtn").onclick=()=>fileInput.click();
 fileInput.onchange=()=>{
   attachedFiles=[...fileInput.files];
