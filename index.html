@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NovaAI - AI Chatbot</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f7f8fc;--panel:#fff;--panel2:#f1f3f8;--text:#171923;--muted:#6b7280;
+  --border:#e5e7eb;--accent:#6d5dfc;--accent2:#5145cd;--user:#6d5dfc;
+  --assistant:#fff;--shadow:0 10px 35px rgba(20,25,50,.08)
+}
+body.dark{
+  --bg:#101114;--panel:#181a20;--panel2:#22252d;--text:#f3f4f6;--muted:#9ca3af;
+  --border:#30333d;--assistant:#1b1e25;--shadow:0 10px 35px rgba(0,0,0,.25)
+}
+body{font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
+button,input{font:inherit}
+button{cursor:pointer;border:0}
+.app{height:100vh;display:flex}
+.sidebar{
+  width:270px;background:var(--panel);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;padding:16px;transition:.25s;z-index:10
+}
+.brand{display:flex;align-items:center;gap:10px;padding:8px 6px 20px;font-weight:800;font-size:20px}
+.logo{width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,#7c6cff,#43c6ff);display:grid;place-items:center;color:white;font-size:19px}
+.new-chat{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--panel);color:var(--text);font-weight:600;text-align:left}
+.new-chat:hover{background:var(--panel2)}
+.history{flex:1;overflow:auto;margin-top:18px}
+.history-title{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;margin:0 8px 8px}
+.history-item{padding:10px;border-radius:9px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);cursor:pointer}
+.history-item:hover{background:var(--panel2);color:var(--text)}
+.side-bottom{border-top:1px solid var(--border);padding-top:12px}
+.side-btn{width:100%;display:flex;align-items:center;gap:10px;padding:10px;border-radius:9px;background:transparent;color:var(--text);text-align:left}
+.side-btn:hover{background:var(--panel2)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{
+  height:64px;border-bottom:1px solid var(--border);background:var(--panel);
+  display:flex;align-items:center;justify-content:space-between;padding:0 20px
+}
+.mobile-menu{display:none;background:transparent;color:var(--text);font-size:23px}
+.model{display:flex;align-items:center;gap:8px;font-weight:700}
+.status{width:8px;height:8px;background:#22c55e;border-radius:50%}
+.top-actions{display:flex;gap:8px}
+.icon-btn{width:38px;height:38px;border-radius:10px;background:transparent;color:var(--text);font-size:18px}
+.icon-btn:hover{background:var(--panel2)}
+.chat{flex:1;overflow-y:auto;padding:28px 18px 140px}
+.messages{max-width:850px;margin:auto}
+.welcome{text-align:center;padding:60px 15px 30px}
+.welcome .big-logo{margin:auto auto 18px;width:68px;height:68px;border-radius:22px;background:linear-gradient(135deg,#7c6cff,#43c6ff);display:grid;place-items:center;color:#fff;font-size:32px;box-shadow:0 12px 30px rgba(109,93,252,.25)}
+.welcome h1{font-size:32px;margin-bottom:8px}
+.welcome p{color:var(--muted);font-size:15px}
+.message{display:flex;gap:12px;margin:18px 0;align-items:flex-start}
+.message.user{justify-content:flex-end}
+.avatar{width:34px;height:34px;flex:0 0 34px;border-radius:11px;display:grid;place-items:center;font-size:15px;font-weight:700}
+.message.assistant .avatar{background:linear-gradient(135deg,#7c6cff,#43c6ff);color:#fff}
+.message.user .avatar{background:var(--panel2);color:var(--text);order:2}
+.bubble{max-width:min(720px,80%);padding:13px 15px;border-radius:16px;line-height:1.55;font-size:14px;white-space:pre-wrap;word-wrap:break-word}
+.message.assistant .bubble{background:var(--assistant);border:1px solid var(--border);border-top-left-radius:5px;box-shadow:var(--shadow)}
+.message.user .bubble{background:var(--user);color:#fff;border-top-right-radius:5px}
+.typing{display:flex;gap:4px;align-items:center;padding:5px 2px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:bounce 1s infinite}
+.dot:nth-child(2){animation-delay:.15s}.dot:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+.composer-wrap{position:absolute;bottom:0;left:270px;right:0;padding:16px 20px 20px;background:linear-gradient(transparent,var(--bg) 28%)}
+.composer{max-width:850px;margin:auto;background:var(--panel);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:9px}
+.attachments{display:none;gap:7px;flex-wrap:wrap;padding:4px 6px 8px}
+.file-chip{font-size:12px;background:var(--panel2);padding:6px 9px;border-radius:8px;display:flex;gap:6px;align-items:center}
+.input-row{display:flex;align-items:flex-end;gap:7px}
+#prompt{flex:1;border:0;outline:0;resize:none;background:transparent;color:var(--text);padding:10px;min-height:42px;max-height:130px;line-height:1.4}
+.tool{width:40px;height:40px;border-radius:11px;background:transparent;color:var(--muted);font-size:18px}
+.tool:hover{background:var(--panel2);color:var(--text)}
+.send{background:var(--accent);color:#fff}.send:hover{background:var(--accent2)}
+.composer-note{text-align:center;color:var(--muted);font-size:10px;margin-top:7px}
+.emoji-picker{display:none;position:absolute;bottom:85px;left:8px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:8px;width:220px;box-shadow:var(--shadow);grid-template-columns:repeat(7,1fr);gap:3px}
+.emoji-picker button{background:transparent;padding:6px;border-radius:6px}.emoji-picker button:hover{background:var(--panel2)}
+.toast{position:fixed;right:20px;top:75px;background:var(--text);color:var(--bg);padding:10px 14px;border-radius:9px;font-size:13px;opacity:0;transform:translateY(-8px);transition:.2s;z-index:30}
+.toast.show{opacity:1;transform:translateY(0)}
+@media(max-width:760px){
+  .sidebar{position:fixed;left:-280px;top:0;bottom:0}.sidebar.open{left:0;box-shadow:10px 0 30px rgba(0,0,0,.18)}
+  .mobile-menu{display:block}.composer-wrap{left:0;padding:12px}.topbar{padding:0 12px}.chat{padding-top:18px}
+  .welcome{padding-top:45px}.welcome h1{font-size:26px}.bubble{max-width:82%}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><div class="logo">✦</div> NovaAI</div>
+    <button class="new-chat" id="newChat">＋ New conversation</button>
+    <div class="history">
+      <div class="history-title">Recent chats</div>
+      <div id="historyList"></div>
+    </div>
+    <div class="side-bottom">
+      <button class="side-btn" id="themeBtn">◐ <span>Toggle theme</span></button>
+      <button class="side-btn" id="clearBtn">⌫ <span>Clear conversation</span></button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="model"><button class="mobile-menu" id="menuBtn">☰</button><span class="status"></span> NovaAI</div>
+      <div class="top-actions">
+        <button class="icon-btn" id="topTheme" title="Toggle theme">◐</button>
+        <button class="icon-btn" id="topClear" title="Clear chat">⌫</button>
+      </div>
+    </header>
+
+    <section class="chat" id="chat">
+      <div class="messages" id="messages">
+        <div class="welcome" id="welcome">
+          <div class="big-logo">✦</div>
+          <h1>How can I help you?</h1>
+          <p>Ask questions, use natural-language math, tell stories, take quizzes, or just chat.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="composer-wrap">
+      <div class="composer">
+        <div class="attachments" id="attachments"></div>
+        <div class="input-row">
+          <button class="tool" id="attachBtn" title="Attach file">📎</button>
+          <button class="tool" id="emojiBtn" title="Emoji">😊</button>
+          <textarea id="prompt" rows="1" placeholder="Message NovaAI..."></textarea>
+          <button class="tool" id="voiceBtn" title="Voice input">🎙️</button>
+          <button class="tool send" id="sendBtn" title="Send">➤</button>
+        </div>
+        <div class="composer-note">NovaAI can make mistakes. Verify important information.</div>
+        <div class="emoji-picker" id="emojiPicker"></div>
+      </div>
+      <input type="file" id="fileInput" hidden multiple>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = "novaai_conversation_v1";
+const HISTORY_KEY = "novaai_history_v1";
+
+const messagesEl = document.getElementById("messages");
+const welcomeEl = document.getElementById("welcome");
+const promptEl = document.getElementById("prompt");
+const chatEl = document.getElementById("chat");
+const attachmentsEl = document.getElementById("attachments");
+const fileInput = document.getElementById("fileInput");
+const emojiPicker = document.getElementById("emojiPicker");
+const toastEl = document.getElementById("toast");
+
+let messages = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+let attachedFiles = [];
+
+const emojis = ["😀","😂","😊","😍","🤔","😎","👍","👏","🔥","✨","🎉","❤️","💡","🚀","📚","💻","🎯","✅","❌","🙏","😄","😅","🤖","🌟","🙌","💪","🥳","😮","😢","😉","❤️‍🔥","☕","🌈","⭐"];
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+  renderHistory();
+}
+function showToast(text) {
+  toastEl.textContent = text;
+  toastEl.classList.add("show");
+  clearTimeout(showToast.t);
+  showToast.t = setTimeout(()=>toastEl.classList.remove("show"),1800);
+}
+function escapeHTML(str){
+  return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+}
+function render(){
+  messagesEl.innerHTML = "";
+  if(!messages.length){
+    messagesEl.appendChild(welcomeEl);
+    welcomeEl.style.display = "block";
+    return;
+  }
+  welcomeEl.style.display = "none";
+  messages.forEach(m=>{
+    const row=document.createElement("div");
+    row.className="message "+m.role;
+    const avatar=document.createElement("div");
+    avatar.className="avatar";
+    avatar.textContent=m.role==="assistant"?"✦":"U";
+    const bubble=document.createElement("div");
+    bubble.className="bubble";
+    bubble.innerHTML=escapeHTML(m.content).replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>");
+    if(m.role==="assistant") row.append(avatar,bubble); else row.append(bubble,avatar);
+    messagesEl.appendChild(row);
+  });
+  chatEl.scrollTop=chatEl.scrollHeight;
+}
+function renderHistory(){
+  const list=document.getElementById("historyList");
+  list.innerHTML="";
+  const history=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]");
+  history.slice(0,8).forEach(item=>{
+    const div=document.createElement("div");
+    div.className="history-item";
+    div.textContent=item;
+    div.onclick=()=>{ promptEl.value=item; promptEl.focus(); };
+    list.appendChild(div);
+  });
+}
+function addHistory(text){
+  if(!text.trim()) return;
+  let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]");
+  h=[text.trim(),...h.filter(x=>x!==text.trim())].slice(0,8);
+  localStorage.setItem(HISTORY_KEY,JSON.stringify(h));
+}
+function addMessage(role,content){
+  messages.push({role,content,time:Date.now()});
+  save(); render();
+}
+function clearChat(){
+  if(messages.length && !confirm("Clear this conversation?")) return;
+  messages=[];
+  localStorage.removeItem(STORAGE_KEY);
+  render();
+  showToast("Conversation cleared");
+}
+function newChat(){
+  if(messages.length && !confirm("Start a new conversation?")) return;
+  messages=[];
+  localStorage.removeItem(STORAGE_KEY);
+  render();
+  promptEl.value="";
+  showToast("New conversation started");
+}
+function typing(){
+  const row=document.createElement("div");
+  row.className="message assistant";
+  row.id="typing";
+  row.innerHTML='<div class="avatar">✦</div><div class="bubble"><div class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>';
+  messagesEl.appendChild(row);
+  chatEl.scrollTop=chatEl.scrollHeight;
+}
+function removeTyping(){ document.getElementById("typing")?.remove(); }
+
+function normalize(text){
+  return text.toLowerCase().replace(/[^\w\s?%+\-*/.=]/g," ").replace(/\s+/g," ").trim();
+}
+
+function containsAny(text, words){
+  return words.some(w => text.includes(w));
+}
+
+function calculateExpression(text){
+  let original = text.trim();
+  let cleaned = original.toLowerCase()
+    .replace(/what is|calculate|compute|solve|answer|equals|equal to|please|can you/gi,"")
+    .replace(/square root of/gi,"sqrt ")
+    .replace(/cube root of/gi,"cbrt ")
+    .replace(/multiplied by|multiply by|times/gi,"*")
+    .replace(/divided by|divide by/gi,"/")
+    .replace(/plus/gi,"+")
+    .replace(/minus/gi,"-")
+    .replace(/to the power of|raised to/gi,"^")
+    .replace(/modulo|mod/gi,"%")
+    .replace(/×/g,"*").replace(/÷/g,"/")
+    .replace(/,/g,"")
+    .replace(/\^/g,"**")
+    .replace(/\?/g,"")
+    .trim();
+
+  // Handle percentages such as "20% of 500"
+  let percent = cleaned.match(/^(-?\d+(?:\.\d+)?)\s*%\s*(?:of\s*)?(-?\d+(?:\.\d+)?)$/);
+  if(percent){
+    const a=Number(percent[1]), b=Number(percent[2]);
+    return {value:a*b/100, explanation:`${a}% of ${b} = ${a*b/100}`};
+  }
+
+  // Handle square/cube roots
+  let sqrtMatch = cleaned.match(/^sqrt\s+(-?\d+(?:\.\d+)?)$/);
+  if(sqrtMatch){
+    const n=Number(sqrtMatch[1]);
+    if(n<0) return {error:"I can't calculate the square root of a negative number using ordinary real numbers."};
+    return {value:Math.sqrt(n), explanation:`√${n} = ${Math.sqrt(n)}`};
+  }
+  let cbrtMatch = cleaned.match(/^cbrt\s+(-?\d+(?:\.\d+)?)$/);
+  if(cbrtMatch){
+    const n=Number(cbrtMatch[1]);
+    return {value:Math.cbrt(n), explanation:`∛${n} = ${Math.cbrt(n)}`};
+  }
+
+  // Only allow calculator-safe mathematical expressions.
+  if(!/^[0-9+\-*/().%\s]+$/.test(cleaned)) return null;
+
+  try{
+    const result=Function('"use strict";return ('+cleaned+')')();
+    if(!Number.isFinite(result)) return {error:"That calculation gives an undefined or infinite result."};
+
+    const formatted=Number.isInteger(result)
+      ? result.toString()
+      : Number(result.toFixed(10)).toString();
+
+    return {value:result, explanation:`${original} = ${formatted}`};
+  }catch(e){
+    return null;
+  }
+}
+
+const botMemory = JSON.parse(localStorage.getItem("novaai_memory_v1") || "{}");
+
+function saveMemory(){
+  localStorage.setItem("novaai_memory_v1", JSON.stringify(botMemory));
+}
+
+function pick(arr){
+  return arr[Math.floor(Math.random()*arr.length)];
+}
+
+function extractName(text){
+  const m=text.match(/\b(?:my name is|i am|i'm|call me)\s+([A-Za-z][A-Za-z'-]{1,30})/i);
+  return m ? m[1] : null;
+}
+
+function naturalMath(text){
+  let s=text.toLowerCase()
+    .replace(/[?!.]/g," ")
+    .replace(/×/g," * ")
+    .replace(/÷/g," / ")
+    .replace(/\s+/g," ")
+    .trim();
+
+  const numberWords={
+    zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,
+    eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,
+    eighteen:18,nineteen:19,twenty:20,thirty:30,forty:40,fifty:50,sixty:60,
+    seventy:70,eighty:80,ninety:90,hundred:100,thousand:1000
+  };
+
+  for(const [word,value] of Object.entries(numberWords)){
+    s=s.replace(new RegExp("\\b"+word+"\\b","g"),String(value));
+  }
+
+  function nums(str){
+    return str
+      .replace(/\band\b/g," ")
+      .replace(/,/g," ")
+      .trim()
+      .split(/\s+/)
+      .filter(token => token !== "")
+      .map(Number)
+      .filter(Number.isFinite);
+  }
+
+  function fmt(n){
+    return Number.isInteger(n) ? String(n) : String(Number(n.toFixed(10)));
+  }
+
+  // Robust chained-command parser. This is intentionally checked first so
+  // phrases such as "add 2 and 4, and 4. then divide by 2 then multiply by 5"
+  // are treated as one operation chain.
+  const chainParts = s.split(/\s+then\s+/i).map(x=>x.trim()).filter(Boolean);
+  if(chainParts.length > 1 && chainParts.every(x=>/^(add|plus|sum|subtract|minus|take away|multiply|times|multiplied|divide|divided|over)\b/i.test(x))){
+    let value=null;
+    const chainSteps=[];
+    for(const part of chainParts){
+      let op=null, body="";
+      let m=part.match(/^(add|plus|sum(?:\s+of)?)\s+(.+)$/i);
+      if(m){ op="add"; body=m[2]; }
+      if(!op){ m=part.match(/^(subtract|minus|take away)\s+(.+?)\s+from\s+(.+)$/i);
+        if(m && value===null){
+          const a=nums(m[2]), b=nums(m[3]);
+          if(a.length && b.length){ value=b.reduce((x,y)=>x+y,0)-a.reduce((x,y)=>x+y,0);
+            chainSteps.push(`${b.join(" + ")} − ${a.join(" − ")} = ${fmt(value)}`); continue; }
+        }
+      }
+      if(!op){ m=part.match(/^(subtract|minus|take away)\s+(.+)$/i); if(m){op="subtract";body=m[2];} }
+      if(!op){ m=part.match(/^(multiply|times|multiplied(?:\s+by)?)\s+(.+)$/i); if(m){op="multiply";body=m[2].replace(/\bby\b/gi," ");} }
+      if(!op){ m=part.match(/^(divide|divided(?:\s+by)?|over)\s+(.+)$/i); if(m){op="divide";body=m[2].replace(/\bby\b/gi," ");} }
+      if(!op) return null;
+
+      const values=nums(body);
+      if(!values.length) return null;
+      const sym={add:"+",subtract:"−",multiply:"×",divide:"÷"}[op];
+
+      if(value===null){
+        if(op==="add") value=values.reduce((a,b)=>a+b,0);
+        else if(op==="multiply") value=values.reduce((a,b)=>a*b,1);
+        else if(op==="subtract"){ value=values[0]; for(let i=1;i<values.length;i++) value-=values[i]; }
+        else { value=values[0]; for(let i=1;i<values.length;i++){ if(values[i]===0)return "🧮 You can't divide by zero."; value/=values[i]; } }
+        chainSteps.push(`${values.join(" "+sym+" ")} = ${fmt(value)}`);
+      }else{
+        const before=value;
+        if(op==="add") value+=values.reduce((a,b)=>a+b,0);
+        else if(op==="subtract") value-=values.reduce((a,b)=>a+b,0);
+        else if(op==="multiply") value*=values.reduce((a,b)=>a*b,1);
+        else {
+          for(const v of values){ if(v===0)return "🧮 You can't divide by zero."; value/=v; }
+        }
+        chainSteps.push(`${fmt(before)} ${sym} ${values.join(" "+sym+" ")} = ${fmt(value)}`);
+      }
+    }
+    return "🧮 **Let's calculate step by step:**\n\n"+chainSteps.join("\n")+`\n\n✅ **Final answer: ${fmt(value)}**`;
+  }
+
+  // Find operation boundaries even when "and" appears inside an addition list.
+  // Example:
+  // add 2 and 4, and 4 then divide by 2 then multiply by 5
+  const parts=s.split(/\bthen\b|\bafter that\b|\bnext\b/).map(x=>x.trim()).filter(Boolean);
+
+  let current=null;
+  const steps=[];
+  let operationFound=false;
+
+  for(let raw of parts){
+    let clause=raw.trim();
+    let operation=null;
+
+    if(/^(?:please\s+)?(?:add|plus|sum)\b/.test(clause)) operation="add";
+    else if(/^(?:please\s+)?(?:subtract|minus|take away)\b/.test(clause)) operation="subtract";
+    else if(/^(?:please\s+)?(?:multiply|times|multiplied)\b/.test(clause)) operation="multiply";
+    else if(/^(?:please\s+)?(?:divide|divided|over)\b/.test(clause)) operation="divide";
+
+    if(!operation) continue;
+    operationFound=true;
+
+    let values=[];
+    let match;
+
+    if(operation==="add"){
+      match=clause.match(/^(?:add|plus|sum(?:\s+of)?)\s+(.+)$/);
+      if(match) values=nums(match[1]);
+    }
+
+    if(operation==="subtract"){
+      match=clause.match(/^subtract\s+(.+?)\s+from\s+(.+)$/);
+      if(match && current===null){
+        const subtractValues=nums(match[1]);
+        const baseValues=nums(match[2]);
+        if(subtractValues.length && baseValues.length){
+          current=baseValues.reduce((a,b)=>a+b,0)-subtractValues.reduce((a,b)=>a+b,0);
+          steps.push(`${baseValues.join(" + ")} − ${subtractValues.join(" − ")} = ${fmt(current)}`);
+          continue;
+        }
+      }
+      match=clause.match(/^(?:subtract|minus|take away)\s+(.+)$/);
+      if(match) values=nums(match[1]);
+    }
+
+    if(operation==="multiply"){
+      match=clause.match(/^(?:multiply|times|multiplied(?:\s+by)?)\s+(.+)$/);
+      if(match) values=nums(match[1].replace(/\bby\b/g," "));
+    }
+
+    if(operation==="divide"){
+      match=clause.match(/^(?:divide|divided(?:\s+by)?|over)\s+(.+)$/);
+      if(match) values=nums(match[1].replace(/\bby\b/g," "));
+    }
+
+    if(!values.length) continue;
+
+    const symbol={add:"+",subtract:"−",multiply:"×",divide:"÷"}[operation];
+
+    if(current===null){
+      if(operation==="add"){
+        current=values.reduce((a,b)=>a+b,0);
+        steps.push(`${values.join(" + ")} = ${fmt(current)}`);
+      }else if(operation==="multiply"){
+        current=values.reduce((a,b)=>a*b,1);
+        steps.push(`${values.join(" × ")} = ${fmt(current)}`);
+      }else if(operation==="subtract"){
+        current=values[0];
+        for(let i=1;i<values.length;i++) current-=values[i];
+        steps.push(`${values.join(" − ")} = ${fmt(current)}`);
+      }else if(operation==="divide"){
+        current=values[0];
+        for(let i=1;i<values.length;i++){
+          if(values[i]===0) return "🧮 You can't divide by zero.";
+          current/=values[i];
+        }
+        steps.push(`${values.join(" ÷ ")} = ${fmt(current)}`);
+      }
+    }else{
+      if(operation==="add"){
+        const before=current;
+        const amount=values.reduce((a,b)=>a+b,0);
+        current+=amount;
+        steps.push(`${fmt(before)} + ${values.join(" + ")} = ${fmt(current)}`);
+      }else if(operation==="subtract"){
+        const before=current;
+        const amount=values.reduce((a,b)=>a+b,0);
+        current-=amount;
+        steps.push(`${fmt(before)} − ${values.join(" − ")} = ${fmt(current)}`);
+      }else if(operation==="multiply"){
+        const before=current;
+        const amount=values.reduce((a,b)=>a*b,1);
+        current*=amount;
+        steps.push(`${fmt(before)} × ${values.join(" × ")} = ${fmt(current)}`);
+      }else if(operation==="divide"){
+        for(const v of values){
+          if(v===0) return "🧮 You can't divide by zero.";
+          const before=current;
+          current/=v;
+          steps.push(`${fmt(before)} ÷ ${fmt(v)} = ${fmt(current)}`);
+        }
+      }
+    }
+  }
+
+  if(operationFound && current!==null){
+    return "🧮 **Let's calculate step by step:**\n\n"+
+      steps.join("\n")+
+      `\n\n✅ **Final answer: ${fmt(current)}**`;
+  }
+
+  // Percentage
+  let m=s.match(/(?:what is |calculate )?(-?\d+(?:\.\d+)?)\s*percent\s*(?:of)\s*(-?\d+(?:\.\d+)?)/);
+  if(m){
+    const a=Number(m[1]),b=Number(m[2]);
+    return `🧮 **Answer:** ${a}% of ${b} = ${fmt(a*b/100)}`;
+  }
+
+  // Square/cube root
+  m=s.match(/(?:square root|sqrt)\s*(?:of)?\s*(-?\d+(?:\.\d+)?)/);
+  if(m){
+    const n=Number(m[1]);
+    if(n<0) return "🧮 The square root of a negative number isn't a real number.";
+    return `🧮 **Answer:** √${n} = ${fmt(Math.sqrt(n))}`;
+  }
+
+  m=s.match(/(?:cube root|cbrt)\s*(?:of)?\s*(-?\d+(?:\.\d+)?)/);
+  if(m){
+    const n=Number(m[1]);
+    return `🧮 **Answer:** ∛${n} = ${fmt(Math.cbrt(n))}`;
+  }
+
+  // Direct arithmetic expression
+  let expr=s
+    .replace(/what is|calculate|compute|solve|please|can you|answer/gi,"")
+    .replace(/×/g,"*").replace(/÷/g,"/")
+    .replace(/\^/g,"**").trim();
+
+  if(/[0-9]/.test(expr) && /^[0-9+\-*/().%\s]+$/.test(expr)){
+    try{
+      const result=Function('"use strict";return ('+expr+')')();
+      if(Number.isFinite(result)) return `🧮 **Answer:** ${fmt(result)}`;
+    }catch(e){}
+  }
+
+  return null;
+}
+
+function formatNumber(n){
+  if(!Number.isFinite(n)) return "undefined";
+  return Number.isInteger(n) ? n.toString() : Number(n.toFixed(10)).toString();
+}
+
+function makeStory(topic){
+  const t=topic || "adventure";
+  const stories={
+    dragon:`Once upon a time, in a quiet village beside a silver mountain, a young explorer named Mira discovered a tiny dragon hiding inside an old library. The dragon couldn't breathe fire—it breathed glowing letters. Whenever Mira asked a question, the letters floated through the air and formed answers. Together they travelled across the kingdom, helping people solve problems. At sunset, the dragon told Mira, "The greatest magic isn't knowing everything. It's being brave enough to keep learning." Mira smiled, and their adventure had only just begun. 🐉✨`,
+    robot:`In a futuristic city, a small robot named Nova was designed to calculate numbers all day. One evening, Nova noticed a lonely child sitting outside a school. Instead of calculating, Nova sat beside the child and listened. The child wanted to build a robot but didn't know where to start. Nova taught them one tiny step at a time. Years later, the child became an engineer and built thousands of helpful robots. Nova learned an important lesson: sometimes the best answer isn't a number—it's helping someone believe they can succeed. 🤖💙`,
+    student:`Arun was a student who thought he was bad at mathematics. Every time he saw a difficult equation, he wanted to give up. One day his teacher gave him a challenge: solve just one problem every day. Arun followed the plan. At first he made mistakes, then he learned from them. Months later, he looked at the same equations that once frightened him and smiled. He hadn't become perfect. He had simply become persistent. 📚🌱`,
+    space:`Far beyond Earth, a young astronaut named Lina discovered a mysterious blue planet. Her mission was to collect data, but the planet contained something unexpected: a forest that glowed whenever someone told the truth. Lina recorded her discovery and wondered why it existed. Before leaving, she wrote one sentence in her mission log: "The universe is full of answers, but curiosity is what makes us search for them." 🚀🌌`,
+    mystery:`At exactly midnight, every clock in the town stopped. A student named Sam noticed one clock still ticking inside an abandoned classroom. Behind it was a hidden door. Sam opened the door and found hundreds of notes written by students from decades ago. Each note contained a question they wished someone had answered. Sam began researching the questions, and by morning the mystery was solved: the room had been an old student research club. The clock had stopped, but curiosity never had. 🕵️‍♂️📖`
+  };
+  return stories[t] || `Once upon a time, a curious character named Alex set out on a ${t} adventure. Along the way, Alex met strangers who became friends, faced problems that seemed impossible, and discovered that every challenge contained a lesson. At the end of the journey, Alex realized that the most important part of any story is not reaching the destination, but becoming a better person along the way. ✨`;
+}
+
+function makeRiddle(){
+  return pick([
+    "🧩 Riddle: I have keys but no locks. I have space but no room. You can enter, but you can't go outside. What am I?\n\nAnswer: A keyboard! ⌨️",
+    "🧩 Riddle: What has hands but cannot clap?\n\nAnswer: A clock! 🕐",
+    "🧩 Riddle: What gets wetter the more it dries?\n\nAnswer: A towel! 🧺",
+    "🧩 Riddle: I’m tall when I’m young and short when I’m old. What am I?\n\nAnswer: A candle! 🕯️"
+  ]);
+}
+
+function makeQuiz(topic){
+  const quizzes={
+    math:[
+      "1. What is 12 × 8?\nA) 86\nB) 96\nC) 108\nD) 112\n\n2. What is 100 ÷ 4?\nA) 20\nB) 25\nC) 30\nD) 40\n\n3. What is 15 + 27?\nA) 32\nB) 40\nC) 42\nD) 52\n\nAnswers: 1-B, 2-B, 3-C"
+    ],
+    programming:[
+      "1. Which language runs directly in a browser?\nA) JavaScript\nB) SQL\nC) Python\nD) Java\n\n2. What does HTML define?\nA) Web structure\nB) Database tables\nC) Computer hardware\nD) Network cables\n\n3. What does CSS control?\nA) Styling\nB) Electricity\nC) File storage\nD) CPU speed\n\nAnswers: 1-A, 2-A, 3-A"
+    ],
+    general:[
+      "1. What planet do humans live on?\nA) Mars\nB) Venus\nC) Earth\nD) Jupiter\n\n2. How many days are in a week?\nA) 5\nB) 6\nC) 7\nD) 8\n\n3. What is H2O commonly called?\nA) Salt\nB) Water\nC) Oxygen\nD) Hydrogen\n\nAnswers: 1-C, 2-C, 3-B"
+    ]
+  };
+  return quizzes[topic] || quizzes.general;
+}
+
+function localAI(input){
+  const q=normalize(input);
+
+  // Memory
+  const name=extractName(input);
+  if(name){
+    botMemory.name=name;
+    saveMemory();
+    return `Nice to meet you, ${name}! 👋 I'll remember your name during future chats on this device.`;
+  }
+  if(containsAny(q,["what is my name","do you know my name","remember my name"])){
+    return botMemory.name ? `Your name is ${botMemory.name}. 😊` : "You haven't told me your name yet. Try saying: “My name is Alex.”";
+  }
+
+  // Natural-language math
+  const math=naturalMath(input);
+  if(math) return math;
+
+  // Storytelling
+  if(containsAny(q,["tell me a story","write a story","story about","make a story","short story"])){
+    let topic="adventure";
+    if(q.includes("dragon")) topic="dragon";
+    else if(q.includes("robot")) topic="robot";
+    else if(q.includes("student")||q.includes("school")) topic="student";
+    else if(q.includes("space")||q.includes("astronaut")) topic="space";
+    else if(q.includes("mystery")) topic="mystery";
+    return "📖 **Here's a story for you:**\n\n"+makeStory(topic);
+  }
+  if(containsAny(q,["continue the story","continue story"])){
+    return "📖 **Story continuation:**\n\nThe next morning, the main character discovered a mysterious note beneath the door. It contained only three words: “The journey continues.” With curiosity overcoming fear, they packed a small bag and stepped outside. Whatever waited beyond the road would become the beginning of their next chapter. ✨";
+  }
+
+  // Entertainment
+  if(containsAny(q,["tell me a joke","make me laugh","give me a joke"]))
+    return pick(["😂 Why do programmers prefer dark mode? Because light attracts bugs!","😂 Why was the computer cold? It left its Windows open!","😂 I told my computer I needed a break. Now it won't stop sending me vacation ads."]);
+  if(containsAny(q,["riddle","give me a puzzle"]))
+    return makeRiddle();
+  if(containsAny(q,["fun fact","interesting fact"]))
+    return pick(["🦩 A group of flamingos is called a flamboyance.","🐙 Octopuses have three hearts.","🌍 Earth is not a perfect sphere; it is slightly flattened at the poles.","🐝 Honeybees can communicate the location of food through movement."]);
+  if(containsAny(q,["give me a quiz","quiz me","quiz"]))
+    return makeQuiz(containsAny(q,["math","mathematics"])?"math":containsAny(q,["programming","coding","computer"])?"programming":"general");
+
+  // Greetings and small talk
+  if(/^(hi|hello|hey|hiya|yo|sup)$/.test(q))
+    return `Hello${botMemory.name?", "+botMemory.name:""}! 👋 How can I help you today?`;
+  if(containsAny(q,["good morning","good afternoon","good evening","good night"]))
+    return "Hello! 😊 I hope you're having a great day. What would you like to do?";
+  if(containsAny(q,["how are you","how r you"]))
+    return "I'm doing great and ready to help! 🤖 You can ask me a question, give me a math problem, or ask for a story.";
+  if(containsAny(q,["who are you","what are you","your name"]))
+    return "I'm NovaAI 🤖, a browser-based assistant with a local NLP-style intent engine, natural-language math, stories, quizzes, jokes, riddles, and study help.";
+  if(containsAny(q,["what can you do","what do you do","how can you help"]))
+    return "I can understand basic natural-language requests, solve math, tell stories, create quizzes, give riddles and jokes, remember your name locally, and explain programming, AI, UI/UX, Scrum, Agile, and student-management topics.";
+  if(containsAny(q,["thank you","thanks","thank u"]))
+    return "You're very welcome! 😊";
+  if(containsAny(q,["bye","goodbye","see you"]))
+    return "Goodbye! 👋 Have a great day!";
+  if(containsAny(q,["i am bored","im bored","i'm bored"]))
+    return "Let's fix that! 😄 Ask me for a story, joke, riddle, quiz, math challenge, or creative idea.";
+  if(containsAny(q,["motivate me","motivation","motivational"]))
+    return "🌱 Small progress is still progress. You don't have to finish everything today—just take the next useful step.";
+
+  // Study and programming
+  if(containsAny(q,["what is ai","define ai","artificial intelligence"]))
+    return "AI (Artificial Intelligence) is technology that enables computers to perform tasks that usually require human-like abilities, such as understanding language, recognizing patterns, solving problems, and generating content.";
+  if(containsAny(q,["what is html","html meaning"]))
+    return "HTML stands for HyperText Markup Language. It defines the structure of web pages.";
+  if(containsAny(q,["what is css","css meaning"]))
+    return "CSS stands for Cascading Style Sheets. It controls the visual appearance and layout of web pages.";
+  if(containsAny(q,["what is javascript","javascript meaning","js meaning"]))
+    return "JavaScript is a programming language used to make websites interactive and dynamic.";
+  if(containsAny(q,["html css javascript difference","difference between html css javascript"]))
+    return "HTML = structure 🧱, CSS = appearance 🎨, JavaScript = behavior ⚙️.";
+  if(containsAny(q,["what is scrum","scrum meaning"]))
+    return "Scrum is an Agile framework that organizes work into short Sprints. It uses activities such as Sprint Planning, Daily Scrum, Sprint Review, and Sprint Retrospective.";
+  if(containsAny(q,["what is agile","agile meaning"]))
+    return "Agile is a software-development approach focused on iterative development, collaboration, customer feedback, and adapting to change.";
+  if(containsAny(q,["student management","student management system"]))
+    return "A Student Management System can manage students, attendance, fees, departments, placements, marks, and reports. A dashboard with search, filters, forms, and popup dialogs makes it easier to use.";
+  if(containsAny(q,["attendance"]))
+    return "An attendance module can record present/absent status, calculate percentages, filter students, and generate attendance reports.";
+  if(containsAny(q,["fees","fee management"]))
+    return "A fees module can show total fees, paid amount, pending amount, due dates, payment history, and receipts.";
+  if(containsAny(q,["placement","placements"]))
+    return "A placement module can track companies, job roles, eligibility, applications, interviews, selected students, and placement statistics.";
+  if(containsAny(q,["affinity diagram","figjam"]))
+    return "An affinity diagram groups related research observations into themes. In FigJam, use sticky notes and cluster them under themes such as Pain Points, Positive Feedback, Needs, and Situations.";
+  if(containsAny(q,["empathy map"]))
+    return "An empathy map usually contains Says, Thinks, Does, and Feels. It helps summarize a user's thoughts, behavior, words, and emotions.";
+
+  // Time/date
+  if(containsAny(q,["what time is it","current time","time now"]))
+    return "🕐 Your local browser time is " + new Date().toLocaleTimeString() + ".";
+  if(containsAny(q,["what is the date","today's date","todays date","date today"]))
+    return "📅 Today is " + new Date().toLocaleDateString(undefined,{weekday:"long",year:"numeric",month:"long",day:"numeric"}) + ".";
+
+  // Generic conversational fallback
+  if(q.endsWith("?"))
+    return "That's an interesting question. 🙂 I can answer many basic questions, solve natural-language math problems, create stories and quizzes, and help with programming and study topics. Try asking me in another way if I didn't understand it.";
+  if(q.length<8)
+    return "I'm listening. 🙂 Tell me a little more.";
+  return "I understand. 🙂 I'm still a local chatbot, but I can now understand many natural-language commands. Try something like “add 25 and 40”, “tell me a story about a dragon”, “give me a riddle”, or “quiz me on programming.”";
+}
+
+async function sendMessage(){
+  const text=promptEl.value.trim();
+  if(!text && !attachedFiles.length) return;
+
+  const finalText = text || "Please review my attached file.";
+  addHistory(finalText);
+  addMessage("user", finalText + (attachedFiles.length ? "\\n📎 Attached: "+attachedFiles.map(f=>f.name).join(", ") : ""));
+  promptEl.value="";
+  promptEl.style.height="auto";
+  attachedFiles=[];
+  attachmentsEl.innerHTML="";
+  attachmentsEl.style.display="none";
+  emojiPicker.style.display="none";
+
+  typing();
+  await new Promise(r=>setTimeout(r,700+Math.random()*800));
+  removeTyping();
+  addMessage("assistant", localAI(finalText));
+}
+
+document.getElementById("sendBtn").onclick=sendMessage;
+document.getElementById("newChat").onclick=newChat;
+document.getElementById("clearBtn").onclick=clearChat;
+document.getElementById("topClear").onclick=clearChat;
+
+function toggleTheme(){
+  document.body.classList.toggle("dark");
+  localStorage.setItem("novaai_theme",document.body.classList.contains("dark")?"dark":"light");
+}
+document.getElementById("themeBtn").onclick=toggleTheme;
+document.getElementById("topTheme").onclick=toggleTheme;
+
+document.getElementById("menuBtn").onclick=()=>document.getElementById("sidebar").classList.toggle("open");
+
+promptEl.addEventListener("input",()=>{
+  promptEl.style.height="auto";
+  promptEl.style.height=Math.min(promptEl.scrollHeight,130)+"px";
+});
+promptEl.addEventListener("keydown",e=>{
+  if(e.key==="Enter" && !e.shiftKey){e.preventDefault();sendMessage();}
+});
+
+document.getElementById("attachBtn").onclick=()=>fileInput.click();
+fileInput.onchange=()=>{
+  attachedFiles=[...fileInput.files];
+  attachmentsEl.innerHTML="";
+  attachedFiles.forEach(file=>{
+    const chip=document.createElement("div");
+    chip.className="file-chip";
+    chip.textContent="📎 "+file.name;
+    attachmentsEl.appendChild(chip);
+  });
+  attachmentsEl.style.display=attachedFiles.length?"flex":"none";
+  if(attachedFiles.length) showToast(attachedFiles.length+" file(s) attached");
+  fileInput.value="";
+};
+
+document.getElementById("emojiBtn").onclick=()=>{
+  emojiPicker.style.display=emojiPicker.style.display==="grid"?"none":"grid";
+};
+emojis.forEach(e=>{
+  const b=document.createElement("button");
+  b.textContent=e;
+  b.onclick=()=>{promptEl.value+=e;promptEl.focus();};
+  emojiPicker.appendChild(b);
+});
+
+let recognition=null;
+const voiceBtn=document.getElementById("voiceBtn");
+if("webkitSpeechRecognition" in window || "SpeechRecognition" in window){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  recognition=new SR();
+  recognition.lang="en-US";
+  recognition.interimResults=false;
+  recognition.onstart=()=>{voiceBtn.textContent="🔴";showToast("Listening...");};
+  recognition.onend=()=>voiceBtn.textContent="🎙️";
+  recognition.onresult=e=>{
+    promptEl.value+=(promptEl.value?" ":"")+e.results[0][0].transcript;
+    promptEl.dispatchEvent(new Event("input"));
+  };
+  voiceBtn.onclick=()=>{try{recognition.start()}catch(e){}};
+}else{
+  voiceBtn.onclick=()=>showToast("Voice input is not supported in this browser");
+}
+
+if(localStorage.getItem("novaai_theme")==="dark") document.body.classList.add("dark");
+render();
+renderHistory();
+</script>
+</body>
+</html>
